@@ -26,8 +26,6 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
-
-	"github.com/Azure/go-autorest/autorest/adal"
 )
 
 // EncodedAs is a series of constants specifying various data encodings
@@ -62,9 +60,9 @@ func NewDecoder(encodedAs EncodedAs, r io.Reader) Decoder {
 // is especially useful if there is a chance the data will fail to decode.
 // encodedAs specifies the expected encoding, r provides the io.Reader to the data, and v
 // is the decoding destination.
-func CopyAndDecode(encodedAs EncodedAs, r io.Reader, v interface{}) (bytes.Buffer, error) {
-	b := bytes.Buffer{}
-	return b, NewDecoder(encodedAs, io.TeeReader(r, &b)).Decode(v)
+func CopyAndDecode(encodedAs EncodedAs, r io.Reader, v interface{}) (b bytes.Buffer, err error) {
+	err = NewDecoder(encodedAs, io.TeeReader(r, &b)).Decode(v)
+	return
 }
 
 // TeeReadCloser returns a ReadCloser that writes to w what it reads from rc.
@@ -205,18 +203,6 @@ func ChangeToGet(req *http.Request) *http.Request {
 	req.ContentLength = 0
 	req.Header.Del("Content-Length")
 	return req
-}
-
-// IsTokenRefreshError returns true if the specified error implements the TokenRefreshError
-// interface.  If err is a DetailedError it will walk the chain of Original errors.
-func IsTokenRefreshError(err error) bool {
-	if _, ok := err.(adal.TokenRefreshError); ok {
-		return true
-	}
-	if de, ok := err.(DetailedError); ok {
-		return IsTokenRefreshError(de.Original)
-	}
-	return false
 }
 
 // IsTemporaryNetworkError returns true if the specified error is a temporary network error or false

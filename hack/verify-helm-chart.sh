@@ -35,6 +35,15 @@ function validate_image() {
   fi
 }
 
+echo "Running helm lint"
+
+if [[ -z "$(command -v helm)" ]]; then
+  echo "Cannot find helm. Installing helm..."
+  curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+fi
+
+helm lint ${PKG_ROOT}/charts/latest/csi-driver-smb
+
 echo "Comparing image version between helm chart and manifests in deploy folder"
 
 if [[ -z "$(command -v pip)" ]]; then
@@ -49,12 +58,13 @@ if [[ -z "$(command -v jq)" ]]; then
 fi
 
 # jq-equivalent for yaml
-pip install yq --ignore-installed PyYAML
+pip install yq --break-system-packages --ignore-installed PyYAML
 
 # Extract images from csi-smb-controller.yaml
 expected_csi_provisioner_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
-expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
-expected_smb_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
+expected_csi_resizer_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
+expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
+expected_smb_image="$(cat ${PKG_ROOT}/deploy/csi-smb-controller.yaml | yq -r .spec.template.spec.containers[3].image | head -n 1)"
 
 csi_provisioner_image="$(get_image_from_helm_chart "csiProvisioner")"
 validate_image "${expected_csi_provisioner_image}" "${csi_provisioner_image}"
